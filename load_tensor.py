@@ -75,6 +75,6 @@ def load(filename, center, scale, index = (-1)):
         print("Finished")
     return drawings
 
-def gen(strokes):
-    a = se.loader2(strokes)
-    print(a)
+def gen(ink):
+    ink = ip.normalize_and_compute_deltas(ink)
+    print(ink)

@@ -18,6 +18,7 @@ from kivy.metrics import dp
 import time
 import load_tensor
 import separate
+import test
 class MainLayout(BoxLayout):
     pass
 
@@ -172,7 +173,8 @@ class DrawApp(App):
         colors = separate.separate("dataset/splits/camera-split-%05d.tfrecords" % index)
         self.painter.set_colors(colors)
         """
-        load_tensor.gen(self.painter.get_strokes())
+        colors = test.classify(self.painter.get_strokes())
+        self.painter.set_colors(colors)
 
 if __name__ == '__main__':
     DrawApp().run()

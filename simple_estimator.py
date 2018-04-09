@@ -84,7 +84,11 @@ def my_model(features, labels, mode, params):
     squeeze labels into row """
     def get_input_tensors(features, labels):
         shapes = features['shape']
-        lengths = tf.squeeze(tf.slice(shapes, begin=[0,0], size=[params.batch_size, 1]))
+        # Takes height column of shapes
+        lengths = tf.slice(shapes, begin=[0,0], size=[params.batch_size, 1])
+        # Reshape into 1d vector
+        lengths = tf.reshape(lengths,[params.batch_size])
+        # Reshape ink into 8 x h x 3
         inks = tf.reshape(features['ink'], [params.batch_size, -1, 3])
         if labels is not None:
             labels = tf.squeeze(labels)
@@ -138,7 +142,7 @@ def my_model(features, labels, mode, params):
     convolved, lengths = conv_layers(inks, lengths)
     final_state = rnn_layers(convolved, lengths)
     logits = fc_layers(final_state)
-
+    print(logits)
     predictions = tf.argmax(logits, axis=1)
 
     """ Predictions """
@@ -166,14 +170,14 @@ def my_model(features, labels, mode, params):
             "accuracy": tf.metrics.accuracy(labels, predictions)
             })
 
-def get_classifier():
+def get_classifier(batch_size):
     config = tf.estimator.RunConfig(
         model_dir="models/shape_model",
         save_checkpoints_secs=300,
         save_summary_steps=100)
 
     params = tf.contrib.training.HParams(
-        batch_size=8,
+        batch_size=batch_size,
         num_conv=[48, 64, 96],
         conv_len=[5, 5, 3],
         num_nodes=128,
