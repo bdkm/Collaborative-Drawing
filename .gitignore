@@ -1,0 +1,6 @@
+dataset/
+models/
+env/
+exit/
+__pycache__/
+.DS_Store
