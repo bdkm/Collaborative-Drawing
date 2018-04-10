@@ -3,10 +3,6 @@ import functools
 import logging
 import numpy as np
 
-import matplotlib
-#matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-
 """ Defines the model for the network """
 def my_model(features, labels, mode, params):
     """ Reshape inks to nx3, take first column of size and squeeze into row,
@@ -26,10 +22,6 @@ def my_model(features, labels, mode, params):
     """ Convolutional layers """
     def conv_layers(inks, lengths):
         convolved = inks
-        with tf.Session() as sess:
-            units=sess.run(inks)
-            plt.subplot(4, 1, 1)
-            plt.imshow(units[0])
         for i in range(len(params.num_conv)):
             convolved_input = convolved
             if i > 0 and params.dropout:
@@ -38,7 +30,6 @@ def my_model(features, labels, mode, params):
                     rate=params.dropout,
                     training=(mode == tf.estimator.ModeKeys.TRAIN)
                 )
-
             convolved = tf.layers.conv1d(
                 convolved_input,
                 filters=params.num_conv[i],
@@ -47,48 +38,13 @@ def my_model(features, labels, mode, params):
                 strides=1,
                 padding="same",
                 name="conv1d_%d" % i)
-
-            ###
-            print("Iteration: %d" % i)
-            with tf.Session() as sess:
-                init = tf.global_variables_initializer()
-                sess.run(init)
-                units = sess.run(convolved)
-
-                plt.subplot(4, 1, i+2)
-                plt.imshow(units[0])
-
-        plt.show()
-            ###
         return convolved, lengths
-
-    def rnn_layers(convolved, lengths):
-        cell = tf.nn.rnn_cell.BasicLSTMCell
-        cells_fw = [cell(params.num_nodes) for _ in range(params.num_layers)]
-        cells_bw = [cell(params.num_nodes) for _ in range(params.num_layers)]
-        if params.dropout > 0.0:
-            cells_fw = [tf.contrib.rnn.DropoutWrapper(cell) for cell in cells_fw]
-            cells_bw = [tf.contrib.rnn.DropoutWrapper(cell) for cell in cells_bw]
-        outputs, _, _ = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
-            cells_fw=cells_fw,
-            cells_bw=cells_bw,
-            inputs=convolved,
-            sequence_length=lengths,
-            dtype=tf.float32,
-            scope="rnn_classification")
-
-        mask = tf.tile(tf.expand_dims(tf.sequence_mask(lengths, tf.shape(outputs)[1]), 2), [1, 1, tf.shape(outputs)[2]])
-        zero_outside = tf.where(mask, outputs, tf.zeros_like(outputs))
-        outputs = tf.reduce_sum(zero_outside, axis=1)
-        return outputs
 
     def fc_layers(final_state):
         return tf.layers.dense(final_state, params.num_classes)
 
     inks, lengths, labels = get_input_tensors(features, labels)
-
-    convolved, lengths = conv_layers(inks, lengths)
-    final_state = rnn_layers(convolved, lengths)
+    final_state, lengths = conv_layers(inks, lengths)
     logits = fc_layers(final_state)
 
     predictions = tf.argmax(logits, axis=1)
@@ -120,7 +76,7 @@ def my_model(features, labels, mode, params):
 
 def get_classifier(batch_size):
     config = tf.estimator.RunConfig(
-        model_dir="models/shape_model",
+        model_dir="models/conv_model",
         save_checkpoints_secs=300,
         save_summary_steps=100)
 

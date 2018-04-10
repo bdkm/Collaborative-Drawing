@@ -88,7 +88,7 @@ class DrawApp(App):
         clear_button = Button(text='Clear', size = (80,60), size_hint=(None, 1))
         clear_button.bind(on_release=self.clear_strokes)
 
-        self.filename_input = TextInput(text='dataset/camera.tfrecords', size_hint=(1, 1))
+        self.filename_input = TextInput(text='dataset/circle.tfrecords', size_hint=(1, 1))
         self.index_input = TextInput(text='0', size = (60,60), size_hint=(None, 1))
 
         # Model toolbar

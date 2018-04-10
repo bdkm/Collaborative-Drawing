@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import ink_parser as parse
+import utility.ink_parser as parse
 
 """
 Loads quickdraw json file, parses contents and exports tfrecord
@@ -41,7 +41,8 @@ def main():
 
     #write_ink_record(json_names, 'train', 0, 10000)
     #write_ink_record(json_names, 'eval', 10000, 11000)
-    write_ink_record(['dataset/json/full-simplified-camera.ndjson'], 'dataset/camera', 0, 20)
+    write_ink_record(['dataset/json/full-simplified-square.ndjson'], 'dataset/square', 0, 100)
+    write_ink_record(['dataset/json/full-simplified-circle.ndjson'], 'dataset/circle', 0, 100)
 
 
 if __name__ == '__main__':
