@@ -3,81 +3,6 @@ import functools
 import logging
 import numpy as np
 
-""" Creates an input function """
-def get_input_fn(pattern, mode, batch_size):
-    """ Parse a single record """
-    def parse(single_file, mode):
-        # Define feature column structure
-        features = {
-            'ink': tf.VarLenFeature(dtype=tf.float32),
-            'shape': tf.FixedLenFeature([2], dtype=tf.int64),
-            'class_index': tf.FixedLenFeature([1], dtype=tf.int64)
-        }
-        # Parse single record
-        parsed_features = tf.parse_single_example(single_file, features)
-        # Convert sparse tensor to dense (apply shape of tensor)
-        parsed_features["ink"] = tf.sparse_tensor_to_dense(parsed_features["ink"])
-        # Separate out labels
-        labels = parsed_features["class_index"]
-        return parsed_features, labels
-    # Load in filenames holding tfrecords
-    dataset = tf.data.TFRecordDataset.list_files(pattern)
-    # Shuffle filenames
-    dataset = dataset.shuffle(buffer_size=10)
-    # Create indefinite repeats of filenames
-    dataset = dataset.repeat()
-    # Map function to create record dataset and interleave
-    dataset = dataset.interleave(
-        tf.data.TFRecordDataset,
-        cycle_length=10,
-        block_length=1)
-    # Map parsing function over filenames
-    dataset = dataset.map(functools.partial(parse, mode=mode), num_parallel_calls=10)
-    # Prefetch for performance
-    dataset = dataset.prefetch(10000)
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        # Shuffle data
-        dataset = dataset.shuffle(buffer_size=1000000)
-    # Pad inputs to make same length
-    dataset = dataset.padded_batch(batch_size, padded_shapes=dataset.output_shapes)
-    features, labels = dataset.make_one_shot_iterator().get_next()
-    return features, labels
-
-def loader(filename):
-    """ Parse a single record """
-    def parse(single_file):
-        # Define feature column structure
-        features = {
-            'ink': tf.VarLenFeature(dtype=tf.float32),
-            'shape': tf.FixedLenFeature([2], dtype=tf.int64),
-            'class_index': tf.FixedLenFeature([1], dtype=tf.int64)
-        }
-        # Parse single record
-        parsed_features = tf.parse_single_example(single_file, features)
-        # Convert sparse tensor to dense (apply shape of tensor)
-        parsed_features["ink"] = tf.sparse_tensor_to_dense(parsed_features["ink"])
-        # Separate out labels
-        labels = parsed_features["class_index"]
-        return parsed_features, labels
-    # Load in filenames holding tfrecords
-    dataset = tf.data.TFRecordDataset([filename])
-    dataset = dataset.repeat()
-    # Map parsing function over filenames
-    return dataset.map(parse)
-
-
-def loader2(strokes):
-    labels = np.array(['class_index','shape','ink'])
-    features = np.array([0,len(strokes),strokes])
-    dataset = tf.data.Dataset.from_tensor_slices((features,labels))
-
-def predict_input_fn(dataset, batch_size, size):
-    # Pad inputs to make same length
-    dataset = dataset.padded_batch(batch_size, padded_shapes=dataset.output_shapes)
-    dataset = dataset.take(size)
-    features, labels = dataset.make_one_shot_iterator().get_next()
-    return features, labels
-
 """ Defines the model for the network """
 def my_model(features, labels, mode, params):
     """ Reshape inks to nx3, take first column of size and squeeze into row,
@@ -195,11 +120,6 @@ def get_classifier(batch_size):
 
     return classifier
 
-def predict(filename, size):
-    classifier = get_classifier()
-    predictions = classifier.predict(input_fn=lambda:predict_input_fn(filename, 8, size))
-    return predictions
-
 def main():
     # Show info when training
     log = logging.getLogger('tensorflow')
@@ -215,20 +135,8 @@ def main():
     eval_spec = tf.estimator.EvalSpec(
         input_fn=lambda:get_input_fn("dataset/reflected-eval.tfrecords", tf.estimator.ModeKeys.EVAL, 8)
     )
-    #predict("08test-00000-of-00007.tfrecords")
 
     tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
-
-    """
-    tensor = predict_input_fn('08test-00000-of-00007.tfrecords', 1)
-
-    with tf.Session() as sess:
-        for i in range(0,2):
-            f, l = sess.run(tensor)
-            i, l, ll = get_input_tensors(f, l)
-
-            print(i)
-            """
 
 
 if __name__ == '__main__':

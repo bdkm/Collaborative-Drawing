@@ -1,9 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import sys
-import quickdraw_functions as qd
-import ink_parser as ip
-import simple_estimator as se
+import estimators.quickdraw_functions as qd
+import utility.ink_parser as ip
+import estimators.simple_estimator as se
+import estimators.input_functions as input
 """
 Loads contents of a quickdraw tensor into format for plotting
 """
@@ -75,6 +76,23 @@ def load(filename, center, scale, index = (-1)):
         print("Finished")
     return drawings
 
-def gen(ink):
-    ink = ip.normalize_and_compute_deltas(ink)
-    print(ink)
+def class_to_color(c):
+    mapping = {
+        0: (0,0,1), # squiggle
+        1: (0,1,0), # circle
+        2: (0,1,0), # octagon
+        3: (0,1,0), # hexagon
+        4: (1,0,0), # square
+        5: (1,1,0), # triangle
+        6: (1,0,1)  # line
+    }
+    return mapping[c]
+
+def classify(ink):
+    batch_size = len(ink)
+    classifier = se.get_classifier(batch_size)
+    predictions = classifier.predict(input_fn=lambda:input.ink_dataset(ink, batch_size))
+    colors = []
+    for p in predictions:
+        colors.append(class_to_color(p))
+    return colors

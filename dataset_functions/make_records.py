@@ -22,8 +22,8 @@ def write_ink_record(source_names, dest_name, start, end):
                 ink, class_name = parse.parse_element(l)
 
                 feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[class_index])),
-                            'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(ink.shape))),
-                            'ink': tf.train.Feature(float_list=tf.train.FloatList(value=ink.flatten()))}
+                           'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(ink.shape))),
+                           'ink': tf.train.Feature(float_list=tf.train.FloatList(value=ink.flatten()))}
 
                 example = tf.train.Example(features=tf.train.Features(feature=feature))
                 writer.write(example.SerializeToString())

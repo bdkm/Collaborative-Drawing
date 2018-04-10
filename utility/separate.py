@@ -1,9 +1,9 @@
 import tensorflow as tf
 import functools
-import ink_parser
-import simple_estimator as est
+import utility.ink_parser
+import estimators.simple_estimator as est
 import numpy as np
-import quickdraw_functions as qd
+import estimators.quickdraw_functions as qd
 
 """
 Loads a tfrecord and runs each tensor through simple_estimator, outputting a

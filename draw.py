@@ -16,31 +16,14 @@ Window.top = 260
 Window.left = 600
 from kivy.metrics import dp
 import time
-import load_tensor
-import separate
-import test
+import utility.load_tensor as load_tensor
+import utility.separate as separate
+
 class MainLayout(BoxLayout):
     pass
 
 class Toolbar(BoxLayout):
     pass
-
-class Legend(BoxLayout):
-    pass
-
-class LegendItem(Widget):
-    def __init__(self, color, label):
-        super(LegendItem, self).__init__()
-        with self.canvas:
-            Color(*color)
-            Rectangle(pos=self.pos, size=self.size)
-            Label(text=label)
-
-    def on_touch_down(self, touch):
-        with self.canvas:
-            Color(1,0,1,1)
-            Rectangle(pos=self.pos, size=self.size)
-            Label(text="hrllo")
 
 class Canvas(Widget):
     def __init__(self):
@@ -49,6 +32,7 @@ class Canvas(Widget):
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
+            # Begin new stroke
             self.strokes.append([touch.x,touch.y])
             self.timer = time.time()
             with self.canvas:
@@ -57,15 +41,18 @@ class Canvas(Widget):
 
     def on_touch_move(self, touch):
         if self.collide_point(*touch.pos):
+            # Add new point
             elapsed = time.time() - self.timer
-            if elapsed > 0.1:
+            if elapsed > 0.05:
                 self.timer = time.time()
                 self.strokes[-1] += [touch.x, touch.y]
                 touch.ud['line'].points += [touch.x, touch.y]
 
+    """Get the stroke list"""
     def get_strokes(self):
         return self.strokes
 
+    """Set the stroke list"""
     def set_strokes(self, strokes, colors = []):
         self.canvas.clear()
         self.strokes = strokes
@@ -74,6 +61,7 @@ class Canvas(Widget):
                 Color(0.6,0.6,0.6)
                 Line(points=stroke, width=dp(2))
 
+    """Set the colors of the current strokes"""
     def set_colors(self, colors):
         self.canvas.clear()
         with self.canvas:
@@ -109,12 +97,6 @@ class DrawApp(App):
         sep_button = Button(text='Separate', size = (160,60), size_hint=(None, 1))
         sep_button.bind(on_release=self.sep_strokes)
 
-        legend = Legend()
-        line_legend = LegendItem((1,0,1), "Line")
-        squiggle_legend = LegendItem((1,0,1), "Squiggle")
-        square_legend = LegendItem((1,0,1), "Square")
-        circle_legend = LegendItem((1,0,1), "Circle")
-
         # Children
         parent.add_widget(toolbar)
         parent.add_widget(model_toolbar)
@@ -127,20 +109,18 @@ class DrawApp(App):
         toolbar.add_widget(clear_button)
 
         model_toolbar.add_widget(sep_button)
-        #model_toolbar.add_widget(legend)
 
-        legend.add_widget(line_legend)
-        legend.add_widget(squiggle_legend)
-        legend.add_widget(square_legend)
-        legend.add_widget(circle_legend)
         return root
 
+    """Print the current strokes to the command line"""
     def print_strokes(self, obj):
         print(self.painter.get_strokes())
 
+    """Clear all strokes"""
     def clear_strokes(self, obj):
         self.painter.set_strokes([])
 
+    """Set strokes"""
     def set_strokes(self, obj):
         try:
             index = int(self.index_input.text)
@@ -155,6 +135,7 @@ class DrawApp(App):
         #tensor = [item for sublist in tensor for item in sublist]
         self.painter.set_strokes(tensor)
 
+    """Run current strokes through shape model and set colors accordingly"""
     def sep_strokes(self, obj):
         """
         try:
@@ -173,7 +154,7 @@ class DrawApp(App):
         colors = separate.separate("dataset/splits/camera-split-%05d.tfrecords" % index)
         self.painter.set_colors(colors)
         """
-        colors = test.classify(self.painter.get_strokes())
+        colors = load_tensor.classify(self.painter.get_strokes())
         self.painter.set_colors(colors)
 
 if __name__ == '__main__':
