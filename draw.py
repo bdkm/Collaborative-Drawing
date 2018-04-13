@@ -16,8 +16,8 @@ Window.top = 260
 Window.left = 600
 from kivy.metrics import dp
 import time
-import utility.load_tensor as load_tensor
-import utility.separate as separate
+import load_tensor
+import separate
 
 class MainLayout(BoxLayout):
     pass
