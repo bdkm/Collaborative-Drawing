@@ -26,14 +26,7 @@ def my_model(features, labels, mode, params):
     """ Convolutional layers """
     def conv_layers(inks, lengths):
         convolved = inks
-        with tf.Session() as sess:
-            units=sess.run(inks)
-
-            num_strokes = len(units)
-            for j in range(num_strokes):
-                plt.subplot(5, num_strokes, j+1)
-                plt.imshow(units[j])
-
+        layers.append(inks)
         for i in range(len(params.num_conv)):
             convolved_input = convolved
             if i > 0 and params.dropout:
@@ -50,66 +43,40 @@ def my_model(features, labels, mode, params):
                 strides=1,
                 padding="same",
                 name="conv1d_%d" % i)
-
-            ###
-            print("Iteration: %d" % i)
-            with tf.Session() as sess:
-                init = tf.global_variables_initializer()
-                sess.run(init)
-                print(inks)
-                print(convolved)
-                units = sess.run(convolved)
-                num_strokes = len(units)
-                for j in range(num_strokes):
-                    plt.subplot(5, num_strokes, ((i+1)*num_strokes + j)+1)
-                    plt.imshow(units[j])
-            ###
-
+            layers.append(convolved)
         return convolved, lengths
+
     def fc_layers(final_state):
         return tf.layers.dense(final_state, params.num_classes)
 
+    layers = []
     inks, lengths, labels = get_input_tensors(features, labels)
     final_state, lengths = conv_layers(inks, lengths)
 
-    mask = tf.tile(
-    tf.expand_dims(tf.sequence_mask(lengths, tf.shape(final_state)[1]), 2),
-    [1, 1, tf.shape(final_state)[2]])
+    mask = tf.sequence_mask(lengths, tf.shape(final_state)[1])
+    mask = tf.tile(tf.expand_dims(mask, 2), [1, 1, tf.shape(final_state)[2]])
+    layers.append(mask)
     zero_outside = tf.where(mask, final_state, tf.zeros_like(final_state))
+    layers.append(zero_outside)
     final_state = tf.reduce_sum(zero_outside, axis=1)
+    layers.append(final_state)
     logits = fc_layers(final_state)
+    layers.append(logits)
 
-    with tf.Session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        units = sess.run(final_state)
-        print(units)
+    predictions = tf.argmax(logits, axis=1)
+    layers.append([predictions])
 
-        plt.subplot(5, 1, 4)
-        plt.imshow(units)
-
-    #predictions = tf.argmax(logits, axis=1)
+    """
     predictions = {
       # Generate predictions (for PREDICT and EVAL mode)
       "classes": tf.argmax(logits, axis=1),
       # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
       # `logging_hook`.
       "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-  }
+    }
+    """
 
-    with tf.Session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        units = sess.run(logits)
-        print(units)
-        plt.subplot(5, 1, 5)
-        plt.imshow(units)
-    with tf.Session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        units = sess.run(predictions)
-        print(units)
-    plt.show()
+    plot_activations(layers)
 
     """ Predictions """
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -129,6 +96,46 @@ def my_model(features, labels, mode, params):
       "accuracy": tf.metrics.accuracy(labels=labels, predictions=predictions)
       }
     return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
+
+def plot_activations(layers):
+    print("Layers")
+    with tf.Session() as sess:
+        activations = sess.run(layers[0])
+        width = len(activations)
+        height = len(layers)
+        print(activations)
+        for j in range(len(activations)):
+            plt.subplot(height, width, j + 1)
+            plt.imshow(activations[j])
+
+
+    for i in range(1,2):
+        with tf.Session() as sess:
+            saver = tf.train.import_meta_graph('models/conv_model/model.ckpt-100000.meta')
+            saver.restore(sess, tf.train.latest_checkpoint('models/conv_model/'))
+            outputTensors = sess.run(layers[0])
+            #new_saver.restore(sess, tf.train.latest_checkpoint('models/conv_model/'))
+            #print(sess.run('conv1d_0/kernel:0'))
+            #init_g = tf.global_variables_initializer()
+            #sess.run(init_g)
+            #sess.run(init_l)
+    """
+            activations = sess.run(layers[i], feed_dict={tf.placeholder(tf.float32):activations})
+            print(activations)
+
+            if i > 3:
+                plt.subplot(height, 1, i + 1)
+                plt.imshow(activations)
+            else:
+                for j in range(len(activations)):
+                    plt.subplot(height, width, (i * width) + j + 1)
+                    plt.imshow(activations[j])
+
+    plt.subplots_adjust(hspace = .1)
+    plt.subplots_adjust(wspace = .1)
+    plt.show()
+    """
+    print("End layers")
 
 def get_classifier(batch_size):
     config = tf.estimator.RunConfig(

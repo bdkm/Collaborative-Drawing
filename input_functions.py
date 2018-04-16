@@ -34,7 +34,7 @@ def ink_dataset(inks, batch_size):
 
     max_len = len(max(inks,key=len))
     inks = [pad(ink, max_len) for ink in inks]
-
+    
     dataset = tf.data.Dataset.from_tensor_slices(
        {"ink": tf.constant(inks),
         "shape": tf.constant(shapes),

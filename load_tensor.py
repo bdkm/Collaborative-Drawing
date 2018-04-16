@@ -93,10 +93,8 @@ def classify(ink):
     batch_size = len(ink)
     classifier = ce.get_classifier(batch_size)
     predictions = classifier.predict(input_fn=lambda:input.ink_dataset(ink, batch_size))
-    print(predictions)
     colors = []
     for p in predictions:
-        print(p['classes'])
-        print(p['probabilities'])
-        #colors.append(class_to_color(p))
+        print(p)
+        colors.append(class_to_color(p))
     return colors

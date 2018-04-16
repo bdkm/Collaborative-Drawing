@@ -4,10 +4,6 @@ import logging
 import numpy as np
 import input_functions as input
 
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-
 """ Defines the model for the network """
 def my_model(features, labels, mode, params):
     """ Reshape inks to nx3, take first column of size and squeeze into row,
@@ -27,10 +23,6 @@ def my_model(features, labels, mode, params):
     """ Convolutional layers """
     def conv_layers(inks, lengths):
         convolved = inks
-        with tf.Session() as sess:
-            units=sess.run(inks)
-            plt.subplot(4, 1, 1)
-            plt.imshow(units[0])
         for i in range(len(params.num_conv)):
             convolved_input = convolved
             if i > 0 and params.dropout:
@@ -49,18 +41,6 @@ def my_model(features, labels, mode, params):
                 padding="same",
                 name="conv1d_%d" % i)
 
-            ###
-            print("Iteration: %d" % i)
-            with tf.Session() as sess:
-                init = tf.global_variables_initializer()
-                sess.run(init)
-                units = sess.run(convolved)
-
-                plt.subplot(4, 1, i+2)
-                plt.imshow(units[0])
-
-        plt.show()
-            ###
         return convolved, lengths
 
     def rnn_layers(convolved, lengths):
