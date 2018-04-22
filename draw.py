@@ -16,9 +16,14 @@ Window.top = 260
 Window.left = 600
 from kivy.metrics import dp
 import time
+import math
 import load_tensor
 import separate
-
+import conv_toy
+import lstm_toy
+import step_toy
+import generator
+import draw_parser
 class MainLayout(BoxLayout):
     pass
 
@@ -43,7 +48,12 @@ class Canvas(Widget):
         if self.collide_point(*touch.pos):
             # Add new point
             elapsed = time.time() - self.timer
-            if elapsed > 0.05:
+
+            last_x = self.strokes[-1][-2]
+            last_y = self.strokes[-1][-1]
+
+            delta = math.sqrt(math.pow(touch.x - last_x,2) + math.pow(touch.y - last_y,2))
+            if delta > 40:
                 self.timer = time.time()
                 self.strokes[-1] += [touch.x, touch.y]
                 touch.ud['line'].points += [touch.x, touch.y]
@@ -88,7 +98,7 @@ class DrawApp(App):
         clear_button = Button(text='Clear', size = (80,60), size_hint=(None, 1))
         clear_button.bind(on_release=self.clear_strokes)
 
-        self.filename_input = TextInput(text='dataset/circle.tfrecords', size_hint=(1, 1))
+        self.filename_input = TextInput(text='dataset/reflected-eval.tfrecords', size_hint=(1, 1))
         self.index_input = TextInput(text='0', size = (60,60), size_hint=(None, 1))
 
         # Model toolbar
@@ -96,6 +106,12 @@ class DrawApp(App):
 
         sep_button = Button(text='Separate', size = (160,60), size_hint=(None, 1))
         sep_button.bind(on_release=self.sep_strokes)
+
+        plot_button = Button(text='Plot', size = (160,60), size_hint=(None, 1))
+        plot_button.bind(on_release=self.plot)
+
+        gen_button = Button(text='Generate', size = (160,60), size_hint=(None, 1))
+        gen_button.bind(on_release=self.generate)
 
         # Children
         parent.add_widget(toolbar)
@@ -109,6 +125,8 @@ class DrawApp(App):
         toolbar.add_widget(clear_button)
 
         model_toolbar.add_widget(sep_button)
+        model_toolbar.add_widget(plot_button)
+        model_toolbar.add_widget(gen_button)
 
         return root
 
@@ -133,29 +151,26 @@ class DrawApp(App):
 
         tensor = load_tensor.load(self.filename_input.text, center, scale, index)
         #tensor = [item for sublist in tensor for item in sublist]
+
         self.painter.set_strokes(tensor)
 
     """Run current strokes through shape model and set colors accordingly"""
     def sep_strokes(self, obj):
-        """
-        try:
-            index = int(self.index_input.text)
-        except ValueError:
-            index = 0
-
-        scale = min(self.painter.width-200,self.painter.height-200)
-        print(scale)
-        scale = (scale,scale)
-        print(scale)
-        center = (self.painter.width/2, self.painter.height/2)
-
-        tensor = load_tensor.load("dataset/camera.tfrecords", center, scale, index)
-        self.painter.set_strokes(tensor)
-        colors = separate.separate("dataset/splits/camera-split-%05d.tfrecords" % index)
-        self.painter.set_colors(colors)
-        """
         colors = load_tensor.classify(self.painter.get_strokes())
         self.painter.set_colors(colors)
+
+    def plot(self, obj):
+        conv_toy.plot_conv(self.painter.get_strokes())
+
+    def generate(self, obj):
+        strokes, class_index = generator.generate()
+
+        scale = min(self.painter.width,self.painter.height)
+        scale = (scale - 200,scale - 200)
+        center = (self.painter.width/2, self.painter.height/2)
+        strokes = draw_parser.scale_and_center(strokes, scale, center)
+        
+        self.painter.set_strokes(strokes)
 
 if __name__ == '__main__':
     DrawApp().run()

@@ -2,6 +2,7 @@ import tensorflow as tf
 import functools
 import logging
 import numpy as np
+
 import input_functions as input
 
 """ Defines the model for the network """
@@ -31,7 +32,6 @@ def my_model(features, labels, mode, params):
                     rate=params.dropout,
                     training=(mode == tf.estimator.ModeKeys.TRAIN)
                 )
-
             convolved = tf.layers.conv1d(
                 convolved_input,
                 filters=params.num_conv[i],
@@ -40,7 +40,6 @@ def my_model(features, labels, mode, params):
                 strides=1,
                 padding="same",
                 name="conv1d_%d" % i)
-
         return convolved, lengths
 
     def rnn_layers(convolved, lengths):
@@ -67,7 +66,6 @@ def my_model(features, labels, mode, params):
         return tf.layers.dense(final_state, params.num_classes)
 
     inks, lengths, labels = get_input_tensors(features, labels)
-
     convolved, lengths = conv_layers(inks, lengths)
     final_state = rnn_layers(convolved, lengths)
     logits = fc_layers(final_state)
@@ -133,7 +131,7 @@ def main():
 
     train_spec = tf.estimator.TrainSpec(
         input_fn=lambda:input.batch_dataset("dataset/reflected-train.tfrecords", tf.estimator.ModeKeys.TRAIN, 8),
-        max_steps=200
+        max_steps=2000
     )
 
     eval_spec = tf.estimator.EvalSpec(

@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-import estimator_shape as se
 import ink_parser as ip
 
 """A selection of input functions for estimator_shape"""
@@ -34,7 +33,7 @@ def ink_dataset(inks, batch_size):
 
     max_len = len(max(inks,key=len))
     inks = [pad(ink, max_len) for ink in inks]
-    
+
     dataset = tf.data.Dataset.from_tensor_slices(
        {"ink": tf.constant(inks),
         "shape": tf.constant(shapes),

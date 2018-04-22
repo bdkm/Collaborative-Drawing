@@ -70,9 +70,18 @@ def add_jitter(stroke, jitter_amount):
     stroke[:,0:2] += r
     return stroke
 
+def resample(stroke, num):
+    sample = random.sample(range(len(stroke)), num)
+    stroke = np.array([stroke[i] for i in sample])
+    return stroke
+
 def write_ink_record(source_names, dest_name, start, end):
-    filename = "%s_reflected_h.tfrecords" % (dest_name)
+    filename = "%s.tfrecords" % (dest_name)
     writer = tf.python_io.TFRecordWriter(filename)
+    num_sym = 0
+    syms = 0
+    num_not = 0
+    nots = 0
     for source_name in source_names:
         print(source_name)
         with open(source_name) as f:
@@ -89,49 +98,75 @@ def write_ink_record(source_names, dest_name, start, end):
                 strokes = split_strokes(ink)
 
                 for stroke in strokes:
+                    if stroke.shape[0] == 0:
+                        continue
                     left, right = split_accross_center(stroke)
-                    left_reflect = reflect_accross_center(left)
-                    right_reflect = reflect_accross_center(right)
-                    #left = randomize_direction(left)
-                    #right = randomize_direction(right)
-                    #left_reflect = randomize_direction(left_reflect)
-                    #right_reflect = randomize_direction(right_reflect)
 
-                    lefts = connect(np.array(left), left_reflect)
-                    rights = connect(np.array(right), right_reflect)
+                    #lefts = add_jitter(lefts, 0.02)
+                    #rights = add_jitter(rights, 0.02)
 
-                    lefts = randomize_direction(lefts)
-                    rights = randomize_direction(rights)
+                    added = 0
+                    if (random.uniform(0.0, 1.0) > 0.5):
+                        if (left.shape[0] > 0):
+                            if (left.shape[0] > (stroke.shape[0] / 2)):
+                                left = resample(left, int(stroke.shape[0] / 2))
+                            else:
+                                stroke = resample(stroke, (left.shape[0] * 2))
 
-                    lefts = add_jitter(lefts, 0.02)
-                    rights = add_jitter(rights, 0.02)
+                            left_reflect = reflect_accross_center(left)
+                            lefts = connect(np.array(left), left_reflect)
+                            lefts = randomize_direction(lefts)
+                            added = 1
 
-                    lefts = parse.normalize_and_compute_deltas(lefts)
-                    rights = parse.normalize_and_compute_deltas(rights)
-                    stroke = parse.normalize_and_compute_deltas(stroke)
+                            num_sym += lefts.shape[0]
+                            syms += 1
+                            lefts = parse.normalize_and_compute_deltas(lefts)
+                            left_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[1])),
+                                            'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(lefts.shape))),
+                                            'ink': tf.train.Feature(float_list=tf.train.FloatList(value=lefts.flatten()))}
+                            left_example = tf.train.Example(features=tf.train.Features(feature=left_feature))
+                            writer.write(left_example.SerializeToString())
+                    else:
+                        if right.shape[0] > 0:
+                            if (right.shape[0] > (stroke.shape[0] / 2)):
+                                right = resample(right, int(stroke.shape[0] / 2))
+                            else:
+                                stroke = resample(stroke, (right.shape[0] * 2))
 
-                    left_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[1])),
-                                    'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(lefts.shape))),
-                                    'ink': tf.train.Feature(float_list=tf.train.FloatList(value=lefts.flatten()))}
-                    right_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[1])),
-                                    'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(rights.shape))),
-                                    'ink': tf.train.Feature(float_list=tf.train.FloatList(value=rights.flatten()))}
-                    stroke_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[0])),
-                                    'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(stroke.shape))),
-                                    'ink': tf.train.Feature(float_list=tf.train.FloatList(value=stroke.flatten()))}
+                            right_reflect = reflect_accross_center(right)
+                            rights = connect(np.array(right), right_reflect)
+                            rights = randomize_direction(rights)
+                            added = 1
 
+                            num_sym += rights.shape[0]
+                            syms += 1
+                            rights = parse.normalize_and_compute_deltas(rights)
+                            right_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[1])),
+                                            'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(rights.shape))),
+                                            'ink': tf.train.Feature(float_list=tf.train.FloatList(value=rights.flatten()))}
+                            right_example = tf.train.Example(features=tf.train.Features(feature=right_feature))
+                            writer.write(right_example.SerializeToString())
 
-                    left_example = tf.train.Example(features=tf.train.Features(feature=left_feature))
-                    right_example = tf.train.Example(features=tf.train.Features(feature=right_feature))
-                    stroke_example = tf.train.Example(features=tf.train.Features(feature=stroke_feature))
-                    writer.write(left_example.SerializeToString())
-                    writer.write(right_example.SerializeToString())
-                    writer.write(stroke_example.SerializeToString())
+                    if added:
+                        num_not += stroke.shape[0]
+                        nots += 1
+                        stroke = parse.normalize_and_compute_deltas(stroke)
+                        stroke_feature = {'class_index': tf.train.Feature(int64_list=tf.train.Int64List(value=[0])),
+                                        'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=list(stroke.shape))),
+                                        'ink': tf.train.Feature(float_list=tf.train.FloatList(value=stroke.flatten()))}
+                        stroke_example = tf.train.Example(features=tf.train.Features(feature=stroke_feature))
+                        writer.write(stroke_example.SerializeToString())
 
-        writer.close()
+    writer.close()
+    print(syms)
+    print(nots)
+    print(num_sym / syms)
+    print(num_not / nots)
 
 def main():
-    write_ink_record(["dataset/json/full-simplified-camera.ndjson"], 'dataset/reflected', 10000, 100000)
+    write_ink_record(["dataset/json/full-simplified-squiggle.ndjson"], 'dataset/reflected-eval', 0, 10000)
+    write_ink_record(["dataset/json/full-simplified-squiggle.ndjson"], 'dataset/reflected-train', 10000, 100000)
+    #write_ink_record(["dataset/json/full-simplified-squiggle.ndjson"], 'dataset/test', 0, 100)
 
 
 if __name__ == '__main__':

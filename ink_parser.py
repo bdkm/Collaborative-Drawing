@@ -69,3 +69,47 @@ def parse_element(line):
     ink = reshape_ink(ink)
     ink = normalize_and_compute_deltas(ink)
     return ink, class_name
+
+def array_rep_to_ink_rep(ink):
+    def reshape_2d(list):
+        list = np.array(list)
+        return list.reshape(-1,2)
+
+    ink = [reshape_2d(stroke) for stroke in ink]
+
+    def stroke_delimiter(height):
+        zeros = np.zeros((height,1))
+        zeros[-1] = 1
+        return zeros
+
+    ink = [np.hstack((stroke,stroke_delimiter(stroke.shape[0]))) for stroke in ink]
+    return ink
+
+def ink_rep_to_array_rep(ink):
+    def split_by_indicies(l,ss):
+        ll = []
+        start = 0
+        for s in ss:
+            ll.append(l[start:s + 1])
+            start = s + 1
+        return np.array(ll)
+
+    def rolling_sum(l):
+        for i in range(1, len(l)):
+            l[i] = l[i - 1] + l[i]
+        return l
+
+    def interleave(a,b):
+        return [val for pair in zip(a, b) for val in pair]
+    xs = ink[:,0]
+    ys = ink[:,1]
+    ss = ink[:,2]
+    ss = np.nonzero(ss)[0]
+
+    xs = rolling_sum(xs)
+    ys = rolling_sum(ys)
+
+    xs = split_by_indicies(xs, ss)
+    ys = split_by_indicies(ys, ss)
+    
+    return [interleave(*pair) for pair in zip(xs,ys)]
