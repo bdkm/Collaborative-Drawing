@@ -75,3 +75,13 @@ def plot_conv(points):
     plt.gca().xaxis.set_major_locator(plt.NullLocator())
     plt.gca().yaxis.set_major_locator(plt.NullLocator())
     plt.show()
+
+def plot_inks(inks):
+    plt.figure(figsize=(8,8))
+    for ink in inks:
+        x = ink[0::2]
+        y = ink[1::2]
+        plt.plot(x,y,'k',linewidth=5.0)
+    plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    plt.show()

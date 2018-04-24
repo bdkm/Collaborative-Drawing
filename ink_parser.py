@@ -10,7 +10,8 @@ def parse_json(line):
     sample = json.loads(line)
     class_name = sample["word"]
     inkarray = sample["drawing"]
-    return class_name, inkarray
+    recognised = sample['recognized']
+    return class_name, inkarray, recognised
 
 """ Fill numpy array with ink data """
 def reshape_ink(inkarray):
@@ -65,10 +66,10 @@ def normalize_and_compute_deltas(ink):
 
 """ Helper function for parsing an element """
 def parse_element(line):
-    class_name, ink = parse_json(line)
+    class_name, ink, recognised = parse_json(line)
     ink = reshape_ink(ink)
     ink = normalize_and_compute_deltas(ink)
-    return ink, class_name
+    return class_name, ink, recognised
 
 def array_rep_to_ink_rep(ink):
     def reshape_2d(list):
@@ -111,5 +112,5 @@ def ink_rep_to_array_rep(ink):
 
     xs = split_by_indicies(xs, ss)
     ys = split_by_indicies(ys, ss)
-    
+
     return [interleave(*pair) for pair in zip(xs,ys)]

@@ -5,7 +5,7 @@ import quickdraw_functions as qd
 import ink_parser as ip
 import estimator_shape as se
 import input_functions as input
-import estimator_trainer as ce
+import estimator_trainer_conv as ce
 import test3 as t
 """
 Loads contents of a quickdraw tensor into format for plotting

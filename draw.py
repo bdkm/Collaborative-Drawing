@@ -24,6 +24,8 @@ import lstm_toy
 import step_toy
 import generator
 import draw_parser
+import ink_parser as ip
+import numpy as np
 class MainLayout(BoxLayout):
     pass
 
@@ -34,29 +36,34 @@ class Canvas(Widget):
     def __init__(self):
         super(Canvas, self).__init__()
         self.strokes = []
+        self.points = []
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
-            # Begin new stroke
-            self.strokes.append([touch.x,touch.y])
-            self.timer = time.time()
-            with self.canvas:
-                Color(0.6,0.6,0.6)
-                touch.ud['line'] = Line(points=(touch.x, touch.y), width=dp(2))
+            if self.mode == 0:
+                # Begin new stroke
+                self.strokes.append([touch.x,touch.y])
+                self.timer = time.time()
+                with self.canvas:
+                    Color(0.6,0.6,0.6)
+                    touch.ud['line'] = Line(points=(touch.x, touch.y), width=dp(2))
+            else:
+                print("%s,%s"% (touch.x,touch.y))
 
     def on_touch_move(self, touch):
         if self.collide_point(*touch.pos):
-            # Add new point
-            elapsed = time.time() - self.timer
+            if self.mode == 0:
+                # Add new point
+                elapsed = time.time() - self.timer
 
-            last_x = self.strokes[-1][-2]
-            last_y = self.strokes[-1][-1]
+                last_x = self.strokes[-1][-2]
+                last_y = self.strokes[-1][-1]
 
-            delta = math.sqrt(math.pow(touch.x - last_x,2) + math.pow(touch.y - last_y,2))
-            if delta > 40:
-                self.timer = time.time()
-                self.strokes[-1] += [touch.x, touch.y]
-                touch.ud['line'].points += [touch.x, touch.y]
+                delta = math.sqrt(math.pow(touch.x - last_x,2) + math.pow(touch.y - last_y,2))
+                if delta > 40:
+                    self.timer = time.time()
+                    self.strokes[-1] += [touch.x, touch.y]
+                    touch.ud['line'].points += [touch.x, touch.y]
 
     """Get the stroke list"""
     def get_strokes(self):
@@ -85,6 +92,8 @@ class DrawApp(App):
         parent = MainLayout()
         root.add_widget(parent)
         self.painter = Canvas()
+        self.index = 0
+        self.painter.mode = 0
 
         # Main toolbar
         toolbar = Toolbar()
@@ -113,6 +122,12 @@ class DrawApp(App):
         gen_button = Button(text='Generate', size = (160,60), size_hint=(None, 1))
         gen_button.bind(on_release=self.generate)
 
+        plt_button = Button(text='Plot', size = (160,60), size_hint=(None, 1))
+        plt_button.bind(on_release=self.plot_inks)
+
+        sym_button = Button(text='Sym', size = (160,60), size_hint=(None, 1))
+        sym_button.bind(on_release=self.sym)
+
         # Children
         parent.add_widget(toolbar)
         parent.add_widget(model_toolbar)
@@ -127,6 +142,8 @@ class DrawApp(App):
         model_toolbar.add_widget(sep_button)
         model_toolbar.add_widget(plot_button)
         model_toolbar.add_widget(gen_button)
+        model_toolbar.add_widget(sym_button)
+        model_toolbar.add_widget(plt_button)
 
         return root
 
@@ -164,13 +181,31 @@ class DrawApp(App):
 
     def generate(self, obj):
         strokes, class_index = generator.generate()
+        strokes = np.array(ip.ink_rep_to_array_rep(strokes))
 
         scale = min(self.painter.width,self.painter.height)
         scale = (scale - 200,scale - 200)
         center = (self.painter.width/2, self.painter.height/2)
         strokes = draw_parser.scale_and_center(strokes, scale, center)
-        
+
         self.painter.set_strokes(strokes)
+
+    def sym(self,obj):
+        self.index += 1
+        print(self.index)
+        self.painter.mode = 1
+
+        scale = min(self.painter.width,self.painter.height)
+        scale = (scale - 200,scale - 200)
+        center = (self.painter.width/2, self.painter.height/2)
+
+        tensor = load_tensor.load('dataset/square.tfrecords', center, scale, self.index)
+        #tensor = [item for sublist in tensor for item in sublist]
+
+        self.painter.set_strokes(tensor)
+
+    def plot_inks(self, obj):
+        conv_toy.plot_inks(self.painter.get_strokes())
 
 if __name__ == '__main__':
     DrawApp().run()

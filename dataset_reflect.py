@@ -92,7 +92,7 @@ def write_ink_record(source_names, dest_name, start, end):
                     print(i)
                 l = lines[i]
 
-                class_name, ink = parse.parse_json(l)
+                class_name, ink, recognised = parse.parse_json(l)
                 ink = parse.reshape_ink(ink)
                 ink = parse.normalise(ink)
                 strokes = split_strokes(ink)

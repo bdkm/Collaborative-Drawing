@@ -41,7 +41,7 @@ def generate_wiggle(num_points):
     def random_coordinate(angle):
         distance = random.uniform(0.0,1.0)
         return [distance * math.cos(angle), distance * math.sin(angle), 0]
-    angles = [random.uniform(-math.pi / 8, math.pi / 8) for _ in range(num_points)]
+    angles = [np.random.normal(0,0.4) for _ in range(num_points)]
     angles = rolling_sum(angles)
 
     inks = np.array([random_coordinate(a) for a in angles])
@@ -53,7 +53,7 @@ def format(inks):
     return inks#np.array(ip.ink_rep_to_array_rep(inks))
 
 def generate():
-    num_los = random.randint(0,6)
+    num_los = 6#random.randint(0,6)
     class_index = num_los
     num_points = random.randint(12,100)
     if num_los > 0:
@@ -61,7 +61,7 @@ def generate():
     wiggle = generate_wiggle(num_points)
 
     if num_los > 0:
-        if random.uniform(0.0,1.0) > 0.5:
+        if random.uniform(0.0,1.0) > 1.5:
             # Reflect
             side = reflect_accross_center(wiggle)
             side = connect(wiggle, side)

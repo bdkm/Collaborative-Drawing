@@ -34,7 +34,7 @@ def write_ink_record(source_name, dest_name, start, end):
             writer = tf.python_io.TFRecordWriter(filename)
             l = lines[i]
 
-            class_name, ink = parse.parse_json(l)
+            class_name, ink, recognised = parse.parse_json(l)
             ink = parse.reshape_ink(ink)
             strokes = split_strokes(ink)
 

@@ -45,6 +45,7 @@ def my_model(features, labels, mode, params):
     def fc_layers(final_state):
         return tf.layers.dense(final_state, params.num_classes)
 
+
     inks, lengths, labels = get_input_tensors(features, labels)
 
     convolved, lengths = conv_layers(inks, lengths)
@@ -68,15 +69,14 @@ def my_model(features, labels, mode, params):
             global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
 
-
-    eval_metric_ops = {
-      "accuracy": tf.metrics.accuracy(labels=labels, predictions=predictions)
-      }
+    accuracy = tf.metrics.accuracy(labels=labels, predictions=predictions)
+    eval_metric_ops = {"accuracy": accuracy}
+    tf.summary.scalar('accuracy', accuracy[1])
     return tf.estimator.EstimatorSpec(mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 def get_classifier(batch_size):
     config = tf.estimator.RunConfig(
-        model_dir="models/reflected_model",
+        model_dir="models/shape_model_cnn_qd",
         save_checkpoints_secs=300,
         save_summary_steps=100)
 
@@ -86,7 +86,7 @@ def get_classifier(batch_size):
         conv_len=[5,5,3], # Kernel size of each convolutional layer
         num_nodes=128, # Number of LSTM nodes for each LSTM layer
         num_layers=3, # Number of LSTM layers
-        num_classes=2, # Number of classes in final layer
+        num_classes=7, # Number of classes in final layer
         learning_rate=0.0001,
         gradient_clipping_norm=9.0,
         dropout=0.3)
@@ -106,17 +106,16 @@ def main():
 
     classifier = get_classifier(8)
 
-    train_spec = tf.estimator.TrainSpec(
-        input_fn=lambda:input.batch_dataset("dataset/reflected-train.tfrecords", tf.estimator.ModeKeys.TRAIN, 8),
-        max_steps=100000
-    )
+    for i in range(21,51):
+        train_spec = tf.estimator.TrainSpec(
+            input_fn=lambda:input.batch_dataset("dataset/shape-train-???.tfrecords", tf.estimator.ModeKeys.TRAIN, 8),
+            max_steps= 10000 * i
+        )
 
-    eval_spec = tf.estimator.EvalSpec(
-        input_fn=lambda:input.batch_dataset("dataset/reflected-eval.tfrecords", tf.estimator.ModeKeys.EVAL, 8)
-    )
-
-    tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
-
+        eval_spec = tf.estimator.EvalSpec(
+            input_fn=lambda:input.batch_dataset("dataset/shape-eval-???.tfrecords", tf.estimator.ModeKeys.EVAL, 8)
+        )
+        tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
 
 if __name__ == '__main__':
     main()
