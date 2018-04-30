@@ -21,7 +21,6 @@ import load_tensor
 import separate
 import conv_toy
 import lstm_toy
-import step_toy
 import generator
 import draw_parser
 import ink_parser as ip

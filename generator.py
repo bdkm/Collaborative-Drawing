@@ -37,6 +37,14 @@ def rolling_sum(l):
         l[i] = l[i - 1] + l[i]
     return l
 
+def add_jitter(stroke, jitter_amount):
+    if len(stroke) == 0:
+        return stroke
+    zer = np.zeros(stroke.shape)
+    r = np.array([[random.uniform(-jitter_amount, jitter_amount) for _ in range(2)] for _ in range(stroke.shape[0])])
+    stroke[:,0:2] += r
+    return stroke
+
 def generate_wiggle(num_points):
     def random_coordinate(angle):
         distance = random.uniform(0.0,1.0)
@@ -48,12 +56,28 @@ def generate_wiggle(num_points):
     inks[-1][2] = 1
     return inks
 
+def randomize_direction(stroke):
+    if random.uniform(0.0, 1.0) < 0.5:
+        stroke = stroke[::-1]
+        if len(stroke) > 0:
+            stroke[0][2] = 0.0
+            stroke[-1][2] = 1
+    return stroke
+
 def format(inks):
     inks = ip.normalize_and_compute_deltas(rolling_sum(inks))
     return inks#np.array(ip.ink_rep_to_array_rep(inks))
 
+def cycle(inks, i):
+    inks[-1][2] = 0
+    a = inks[:i]
+    b = inks[i:]
+    inks = np.concatenate((b, a), axis=0)
+    inks[-1][2] = 1
+    return inks
+
 def generate():
-    num_los = 6#random.randint(0,6)
+    num_los = random.randint(0,6)
     class_index = num_los
     num_points = random.randint(12,100)
     if num_los > 0:
@@ -61,7 +85,7 @@ def generate():
     wiggle = generate_wiggle(num_points)
 
     if num_los > 0:
-        if random.uniform(0.0,1.0) > 1.5:
+        if random.uniform(0.0,1.0) < 1.5:
             # Reflect
             side = reflect_accross_center(wiggle)
             side = connect(wiggle, side)
@@ -77,8 +101,17 @@ def generate():
             for i in range(1,num_los):
                 a = reverse(rotate_around_center(wiggle, 2 * (i + 1) * math.pi / (num_los + 1)))
                 final = connect(final, a)
+
+        # makes sure start is at random position
+        #final = rotate_around_center(final, random.randint(1, 2 * num_los) * math.pi / num_los)
+        if num_los > 1:
+            index = random.randint(1, num_points * 2 * num_los)
+            print(index)
+            final = cycle(final, index)
     else:
         class_index = 0
         final = wiggle
+
+    final = randomize_direction(final)
 
     return format(final), class_index

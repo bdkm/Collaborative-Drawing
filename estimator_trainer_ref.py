@@ -3,6 +3,28 @@ import logging
 import numpy as np
 import input_functions as input
 
+def rotate(ink, angle):
+    def cum_sub(l):
+        offset = l[:-1]
+        offset = tf.concat([[[0,0,0]],offset], 0)
+        offset = tf.negative(offset)
+        return tf.add(offset,l)
+    sin = math.sin(angle)
+    cos = math.cos(angle)
+
+    ink = tf.cumsum(ink)
+    xs = ink[:,0]
+    ys = ink[:,1]
+    xo = (xs - 0.5)
+    yo = (ys - 0.5)
+    xs = 0.5 + cos * xo- sin * yo
+    ys = 0.5 + sin * xo + cos * yo
+    result = tf.transpose(tf.concat([[xs],[ys],[ink[:,2]]], 0))
+    return cum_sub(result)
+
+def rotate_batch(batch, angle):
+    return tf.map_fn(lambda b: rotate(b, angle), batch)
+
 """ Defines the model for the network """
 def my_model(features, labels, mode, params):
     """ Reshape inks to nx3, take first column of size and squeeze into row,
@@ -73,11 +95,13 @@ def my_model(features, labels, mode, params):
 
     inks, lengths, labels = get_input_tensors(features, labels)
 
-    convolved, lengths = conv_layers(inks, lengths)
-    final_state = rnn_layers(convolved, lengths)
-    logits = fc_layers(final_state)
+    for i in range(0,4):
+        inks_rotated = rotate_batch(inks, i * math.pi / 2)
+        convolved, lengths = conv_layers(inks_rotated, lengths)
+        final_state = rnn_layers(convolved, lengths)
+        logits = fc_layers(final_state)
 
-    predictions = tf.argmax(logits, axis=1)
+        predictions = tf.argmax(logits, axis=1)
 
     """ Predictions """
     if mode == tf.estimator.ModeKeys.PREDICT:
