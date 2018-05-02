@@ -219,7 +219,8 @@ class DrawApp(App):
         self.painter.set_strokes(tensor)
 
     def baseline(self, obj):
-        baseline_symmetry.analyse(self.painter.get_strokes())
+        strokes = self.painter.get_strokes()
+        baseline_symmetry.analyse(strokes)
 
     def plot_inks(self, obj):
         conv_toy.plot_inks(self.painter.get_strokes())

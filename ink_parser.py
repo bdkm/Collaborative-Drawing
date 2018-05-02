@@ -102,11 +102,12 @@ def ink_rep_to_array_rep(ink):
 
     def interleave(a,b):
         return [val for pair in zip(a, b) for val in pair]
+
     xs = ink[:,0]
     ys = ink[:,1]
     ss = ink[:,2]
     ss = np.nonzero(ss)[0]
-
+    
     xs = rolling_sum(xs)
     ys = rolling_sum(ys)
 

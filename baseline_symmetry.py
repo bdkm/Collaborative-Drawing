@@ -3,72 +3,51 @@ import numpy as np
 import ink_parser as ip
 import math
 
-def pad(list,length):
-    list += [[0,0,0] for _ in range(length - len(list))]
-    return list
+def rotate(p, o, angle):
+    qx = o[0] + math.cos(angle) * (p[0] - o[0]) - math.sin(angle) * (p[1] - o[1])
+    qy = o[1] + math.sin(angle) * (p[0] - o[0]) + math.cos(angle) * (p[1] - o[1])
+    return [qx, qy, p[2]]
 
-def array_rep_to_ink_rep(ink):
-    def reshape_2d(list):
-        list = np.array(list)
-        return list.reshape(-1,2)
-
-    ink = [reshape_2d(stroke) for stroke in ink]
-
-    def stroke_delimiter(height):
-        zeros = np.zeros((height,1))
-        zeros[-1] = 1
-        return zeros
-
-    ink = [np.hstack((stroke,stroke_delimiter(stroke.shape[0]))) for stroke in ink]
-    return ink
-
-def rotate_tensor(xs, ys, angle):
-    xo = xs - 0.5
-    yo = ys - 0.5
-
-    qx = 0.5 + math.cos(angle) * xo - math.sin(angle) * yo
-    qy = 0.5 + math.sin(angle) * xo + math.cos(angle) * yo
-    return qx, qy
+def rolling_sum(l):
+    for i in range(1, len(l)):
+        l[i] = l[i - 1] + l[i]
+    return l
 
 def analyse(inks):
-    tf.reset_default_graph()
-    # Initialise data
-    inks = array_rep_to_ink_rep(inks)
-    lengths = [len(i) for i in inks]
-    inks = [ip.normalize_and_compute_deltas(ink) for ink in inks]
-    inks = [ink.tolist() for ink in inks]
-    max_len = len(max(inks,key=len))
-    inks = [pad(ink, max_len) for ink in inks]
+    inks = np.array(ip.array_rep_to_ink_rep(inks))[0]
+    inks = ip.normalise(inks)
 
-    lengths = tf.constant(lengths, tf.int32)
-    inks = tf.constant(inks, tf.float32)
-
-    a = reflectional_symmetry_recogniser(inks)
-    print(a)
-
-def reflectional_symmetry_recogniser(inks):
-    sums = []
+    length = inks.shape[0]
+    segment = int(length / 5)
+    sum = 0.0
     for i in range(0,5):
-        angle = i * 2 * math.pi / 5
-        sliced = tf.slice(inks, tf.constant([0,1,0]), tf.constant([-1,-1,2]))
-        xs = tf.slice(sliced, tf.constant([0,0,0]), tf.constant([-1,-1,1]))
-        ys = tf.slice(sliced, tf.constant([0,0,1]), tf.constant([-1,-1,1]))
-        xs, ys = rotate_tensor(xs, ys, angle)
-        xr = tf.reverse(xs, [1])
-        yr = tf.reverse(ys, [1])
-        xn = xr * (-1)
+        angle = -i * 2 * math.pi / 5
 
-        sx = tf.concat([xs,xn], axis=2)
-        sy = tf.concat([ys,yr], axis=2)
-        sx = tf.reduce_sum(sx, [2])
-        sy = tf.reduce_sum(sy, [2])
-        sx = abs(sx)
-        sy = abs(sy)
+        inks_rotated = np.array([rotate(c,[0.5,0.5],angle) for c in inks])
 
-        sum = tf.reduce_mean(tf.concat([sx,sy], axis=1), [0,1])
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            sum = sess.run(sum)
-            print(sum)
-            sums.append(sum)
-    return sums
+        print("---")
+        offset = segment * i
+        a = inks_rotated[offset:]
+        b = inks_rotated[:offset]
+        if (i > 0):
+            a[-1,2] = 0
+            b[-1,2] = 1
+            cycled = np.vstack((a,b))
+        else:
+            cycled = inks_rotated
+        reversed = cycled[::-1]
+
+        xs = cycled[:,0]
+        ys = cycled[:,1]
+        xn = -1 * reversed[:,0]
+        yn = reversed[:,1]
+
+        xdisp = abs(np.mean(np.array_split(np.add(xs, xn),2)[0]))
+        print(xdisp)
+        ydisp = abs(np.mean(np.array_split(np.add(ys, yn),2)[0]))
+        print(ydisp)
+        sum += xdisp
+        sum += ydisp
+        print(sum)
+    sum
+    print(sum)

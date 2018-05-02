@@ -66,7 +66,8 @@ def randomize_direction(stroke):
 
 def format(inks):
     inks = ip.normalize_and_compute_deltas(rolling_sum(inks))
-    return inks#np.array(ip.ink_rep_to_array_rep(inks))
+    print(inks)
+    return inks
 
 def cycle(inks, i):
     inks[-1][2] = 0
