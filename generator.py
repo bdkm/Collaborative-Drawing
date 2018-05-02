@@ -76,6 +76,23 @@ def cycle(inks, i):
     inks[-1][2] = 1
     return inks
 
+def shear_x(inks, amount):
+    inks[:,0] = inks[:,0] + amount * inks[:,1]
+    return inks
+
+def shear_y(inks, amount):
+    inks[:,1] = inks[:,1] + amount * inks[:,0]
+    return inks
+
+def bow_x(inks, amount):
+    inks[:,0] = ((inks[:,0]-0.5) * ((1-amount)  + (amount*inks[:,1]))) + 0.5
+    return inks
+
+def bow_y(inks, amount):
+    inks[:,1] = ((inks[:,1]-0.5) * ((1-amount)  + (amount*inks[:,0]))) + 0.5
+    return inks
+
+
 def generate():
     num_los = random.randint(0,6)
     class_index = num_los
@@ -106,12 +123,23 @@ def generate():
         #final = rotate_around_center(final, random.randint(1, 2 * num_los) * math.pi / num_los)
         if num_los > 1:
             index = random.randint(1, num_points * 2 * num_los)
-            print(index)
             final = cycle(final, index)
     else:
         class_index = 0
         final = wiggle
 
+    if (True):
+        final = add_jitter(final, 0.1)
+
+    final = rolling_sum(final)
+    if (True):
+
+        final = ip.normalise(final)
+        final = shear_x(final,np.random.normal(-0.065,0.1))
+        final = shear_y(final,np.random.normal(-0.06,0.1))
+        final = bow_x(final, np.random.normal(0.1,0.1))
+        final = bow_y(final, np.random.normal(0.1,0.1))
     final = randomize_direction(final)
+    final = ip.compute_deltas(final)
 
     return format(final), class_index

@@ -47,20 +47,29 @@ def my_model(features, labels, mode, params):
 
         for i in range(len(params.num_conv)):
             convolved_input = convolved
-            if i > 0 and params.dropout:
-                convolved_input = tf.layers.dropout(
+            if i != 2:
+                if i > 0 and params.dropout:
+                    convolved_input = tf.layers.dropout(
+                        convolved_input,
+                        rate=params.dropout,
+                        training=(mode == tf.estimator.ModeKeys.TRAIN)
+                    )
+                convolved = tf.layers.conv1d(
                     convolved_input,
-                    rate=params.dropout,
-                    training=(mode == tf.estimator.ModeKeys.TRAIN)
+                    filters=params.num_conv[i],
+                    kernel_size=params.conv_len[i],
+                    activation=None,
+                    strides=1,
+                    padding="same",
+                    name="conv1d_%d" % i)
+            else:
+                tf.layers.max_pooling1d(
+                    convolved_input,
+                    pool_size=[2],
+                    strides=1,
+                    padding='same',
+                    name='pool1d'
                 )
-            convolved = tf.layers.conv1d(
-                convolved_input,
-                filters=params.num_conv[i],
-                kernel_size=params.conv_len[i],
-                activation=None,
-                strides=1,
-                padding="same",
-                name="conv1d_%d" % i)
 
         return convolved, lengths
 
@@ -95,13 +104,13 @@ def my_model(features, labels, mode, params):
 
     inks, lengths, labels = get_input_tensors(features, labels)
 
-    for i in range(0,4):
-        inks_rotated = rotate_batch(inks, i * math.pi / 2)
-        convolved, lengths = conv_layers(inks_rotated, lengths)
-        final_state = rnn_layers(convolved, lengths)
-        logits = fc_layers(final_state)
+    #for i in range(0,4):
+    inks_rotated = inks#rotate_batch(inks, i * math.pi / 2)
+    convolved, lengths = conv_layers(inks_rotated, lengths)
+    final_state = rnn_layers(convolved, lengths)
+    logits = fc_layers(final_state)
 
-        predictions = tf.argmax(logits, axis=1)
+    predictions = {'logits':logits, 'values':tf.argmax(logits, axis=1)}
 
     """ Predictions """
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -130,15 +139,15 @@ def my_model(features, labels, mode, params):
 
 def get_classifier(batch_size):
     config = tf.estimator.RunConfig(
-        model_dir="models/symmetry_model_old",
+        model_dir="models/symmetry_model",
         save_checkpoints_secs=300,
         save_summary_steps=100)
 
     params = tf.contrib.training.HParams(
         batch_size=batch_size,
         num_conv=[48,64,96], # Sizes of each convolutional layer
-        conv_len=[5,5,3], # Kernel size of each convolutional layer
-        num_nodes=128, # Number of LSTM nodes for each LSTM layer
+        conv_len=[5,3,2,3], # Kernel size of each convolutional layer
+        num_nodes=64, # Number of LSTM nodes for each LSTM layer
         num_layers=3, # Number of LSTM layers
         num_classes=7, # Number of classes in final layer
         learning_rate=0.0001,

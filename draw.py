@@ -25,6 +25,8 @@ import generator
 import draw_parser
 import ink_parser as ip
 import numpy as np
+import baseline_symmetry
+import stars
 class MainLayout(BoxLayout):
     pass
 
@@ -127,6 +129,15 @@ class DrawApp(App):
         sym_button = Button(text='Sym', size = (160,60), size_hint=(None, 1))
         sym_button.bind(on_release=self.sym)
 
+        base_button = Button(text='Baseline', size = (160,60), size_hint=(None, 1))
+        base_button.bind(on_release=self.baseline)
+
+        print_button = Button(text='Print', size = (160,60), size_hint=(None, 1))
+        print_button.bind(on_release=self.print_strokes)
+
+        star_button = Button(text='Star', size = (160,60), size_hint=(None, 1))
+        star_button.bind(on_release=self.get_stars)
+
         # Children
         parent.add_widget(toolbar)
         parent.add_widget(model_toolbar)
@@ -139,10 +150,13 @@ class DrawApp(App):
         toolbar.add_widget(clear_button)
 
         model_toolbar.add_widget(sep_button)
+        model_toolbar.add_widget(print_button)
         model_toolbar.add_widget(plot_button)
         model_toolbar.add_widget(gen_button)
         model_toolbar.add_widget(sym_button)
         model_toolbar.add_widget(plt_button)
+        model_toolbar.add_widget(base_button)
+        model_toolbar.add_widget(star_button)
 
         return root
 
@@ -190,6 +204,7 @@ class DrawApp(App):
         self.painter.set_strokes(strokes)
 
     def sym(self,obj):
+        # Fast way to iterate though a dateset, used for square analysis
         self.index += 1
         print(self.index)
         self.painter.mode = 1
@@ -203,8 +218,27 @@ class DrawApp(App):
 
         self.painter.set_strokes(tensor)
 
+    def baseline(self, obj):
+        baseline_symmetry.analyse(self.painter.get_strokes())
+
     def plot_inks(self, obj):
         conv_toy.plot_inks(self.painter.get_strokes())
+
+    def get_stars(self, obj):
+        """
+        n = 0
+        for i in range(0,20):
+            strokes = stars.get_stars(int(i))
+            c = load_tensor.classify(strokes)[0]
+            if (c == (1,1,0)):
+                n += 1
+        print(n)
+        """
+        strokes = stars.get_stars(int(self.index_input.text))
+        self.painter.set_strokes(strokes)
+
+
+
 
 if __name__ == '__main__':
     DrawApp().run()

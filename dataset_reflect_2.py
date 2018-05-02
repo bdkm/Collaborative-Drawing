@@ -38,8 +38,8 @@ def write_ink_record(dest_name, start, end):
     writer.close()
 
 def main():
-    write_ink_record('dataset/reflected-eval', 0, 10000)
-    write_ink_record('dataset/reflected-train', 10000, 100000)
+    write_ink_record('dataset/reflected-deform-eval', 0, 10000)
+    write_ink_record('dataset/reflected-deform-train', 10000, 100000)
 
 
 if __name__ == '__main__':

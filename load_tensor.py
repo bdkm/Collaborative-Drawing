@@ -5,7 +5,7 @@ import quickdraw_functions as qd
 import ink_parser as ip
 import estimator_shape as se
 import input_functions as input
-import estimator_trainer_conv as ce
+import estimator_trainer_ref as ce
 import test3 as t
 """
 Loads contents of a quickdraw tensor into format for plotting
@@ -96,12 +96,12 @@ def classify(ink):
     batch_size = len(ink)
     classifier = ce.get_classifier(batch_size)
     predictions = classifier.predict(input_fn=lambda:input.ink_dataset(ink, batch_size))
-    print(predictions)
 
     colors = []
 
     for p in predictions:
         print(p)
-        colors.append(class_to_color(p))
+        v = p['values']
+        colors.append(class_to_color(v))
 
     return colors
